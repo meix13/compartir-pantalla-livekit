@@ -1,0 +1,26 @@
+{
+  "id": "compartir-pantalla-livekit",
+  "title": "Dorso Oscuro - Compartir Pantalla (LiveKit)",
+  "description": "Permite al Master compartir su pantalla, ventana o pestaña en alta definición (1080p) a través de LiveKit sin perder su webcam, mostrándola a los jugadores como Ventana Flotante Grande o como Escena sobre el lienzo de Foundry VTT (con zoom y desplazamiento).",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "12",
+    "verified": "14.369",
+    "maximum": "14"
+  },
+  "authors": [
+    {
+      "name": "Miguel Ángel Lucas"
+    }
+  ],
+  "esmodules": [
+    "scripts/screen-share.js"
+  ],
+  "styles": [
+    "styles/screen-share.css"
+  ],
+  "socket": true,
+  "url": "https://github.com/meix13/compartir-pantalla-livekit",
+  "manifest": "https://raw.githubusercontent.com/meix13/compartir-pantalla-livekit/main/module.json",
+  "download": "https://github.com/meix13/compartir-pantalla-livekit/archive/refs/heads/main.zip"
+}

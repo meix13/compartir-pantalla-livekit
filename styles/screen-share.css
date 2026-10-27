@@ -1,0 +1,444 @@
+/* ==========================================================================
+   Dorso Oscuro - Compartir Pantalla con LiveKit (Foundry VTT v12-v14)
+   ========================================================================== */
+
+/* 1. Botón en la caja de cámara de LiveKit del Master */
+.av-control.livekit-screenshare-btn {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.av-control.livekit-screenshare-btn.is-sharing {
+    color: #38bdf8 !important;
+    border-color: #38bdf8 !important;
+    background: rgba(2, 132, 199, 0.35) !important;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.75) !important;
+    animation: do-lk-pulse 1.8s infinite;
+}
+
+@keyframes do-lk-pulse {
+    0%, 100% {
+        box-shadow: 0 0 6px rgba(56, 189, 248, 0.55);
+    }
+    50% {
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.95);
+    }
+}
+
+/* 2. Modal de selección rápida del Master al pulsar Compartir (si se desea elegir modo) */
+#do-lk-start-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    background: rgba(3, 6, 14, 0.72);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Signika", sans-serif;
+}
+
+.do-lk-start-modal {
+    width: 480px;
+    max-width: 94vw;
+    background: linear-gradient(180deg, #0b1120 0%, #070b14 100%);
+    border: 1px solid #38bdf8;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 25px rgba(56, 189, 248, 0.2);
+    padding: 18px 20px;
+    color: #e2e8f0;
+}
+
+.do-lk-start-modal h3 {
+    margin: 0 0 8px 0;
+    font-size: 17px;
+    color: #38bdf8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 10px;
+}
+
+.do-lk-start-modal p.do-lk-desc {
+    margin: 0 0 14px 0;
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.45;
+}
+
+.do-lk-mode-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.do-lk-mode-card {
+    background: #0f172a;
+    border: 2px solid #1e293b;
+    border-radius: 9px;
+    padding: 12px 10px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    color: #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.do-lk-mode-card:hover {
+    border-color: #475569;
+    background: #131e36;
+}
+
+.do-lk-mode-card.selected {
+    border-color: #38bdf8;
+    background: rgba(2, 132, 199, 0.18);
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+}
+
+.do-lk-mode-card .card-title {
+    font-weight: bold;
+    font-size: 13px;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.do-lk-mode-card.selected .card-title {
+    color: #38bdf8;
+}
+
+.do-lk-mode-card .card-sub {
+    font-size: 11.5px;
+    color: #94a3b8;
+    line-height: 1.35;
+}
+
+.do-lk-start-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #050811;
+    border: 1px solid #1e293b;
+    padding: 8px 12px;
+    border-radius: 7px;
+    margin-bottom: 16px;
+    font-size: 12.5px;
+    color: #cbd5e1;
+}
+
+.do-lk-start-options label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+}
+
+.do-lk-start-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* 3. Contenedor Principal del Visor de Pantalla Compartida */
+#do-lk-screenshare-viewer {
+    position: fixed;
+    background: #03060c;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+    pointer-events: all;
+    font-family: "Signika", sans-serif;
+}
+
+/* MODO A: VENTANA FLOTANTE GRANDE (Por defecto / Seguro) */
+#do-lk-screenshare-viewer.mode-floating {
+    top: 8vh;
+    left: calc(50vw - 40vw - 100px);
+    width: 74vw;
+    height: 78vh;
+    min-width: 420px;
+    min-height: 280px;
+    z-index: 125; /* Por encima de UI normal, movible y redimensionable */
+    border: 1.5px solid #38bdf8;
+    border-radius: 10px;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.92), 0 0 22px rgba(56, 189, 248, 0.22);
+}
+
+@media (max-width: 1200px) {
+    #do-lk-screenshare-viewer.mode-floating {
+        left: 6vw;
+        width: 86vw;
+        height: 78vh;
+    }
+}
+
+/* MODO B: COMO ESCENA DE FOUNDRY (Sobre el lienzo #board, debajo de fichas, chat y cámaras) */
+#do-lk-screenshare-viewer.mode-scene {
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    right: 310px !important; /* Respeta el sidebar derecho de Foundry */
+    width: auto !important;
+    height: auto !important;
+    z-index: 25 !important; /* Encima del canvas (#board), debajo de cámaras, fichas y HUD */
+    border: none;
+    border-radius: 0;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
+}
+
+/* MODO C: PANTALLA COMPLETA */
+#do-lk-screenshare-viewer.mode-fullscreen {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    border: none;
+    border-radius: 0;
+}
+
+/* MODO D: MINIMIZADO (Píldora superior flotante) */
+#do-lk-screenshare-viewer.mode-minimized {
+    top: 10px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    z-index: 200 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    pointer-events: none;
+}
+
+#do-lk-screenshare-viewer.mode-minimized .do-lk-video-stage,
+#do-lk-screenshare-viewer.mode-minimized .do-lk-resize-handle,
+#do-lk-screenshare-viewer.mode-minimized .do-lk-stage-hint {
+    display: none !important;
+}
+
+/* 4. Barra de control superior */
+.do-lk-topbar {
+    min-height: 38px;
+    background: rgba(9, 14, 26, 0.95);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 12px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #cbd5e1;
+    z-index: 40;
+    pointer-events: all;
+    backdrop-filter: blur(8px);
+}
+
+/* En Modo Escena o Minimizado, la barra flota centrada arriba para no chocar con los controles de escena de la izquierda */
+#do-lk-screenshare-viewer.mode-scene .do-lk-topbar,
+#do-lk-screenshare-viewer.mode-minimized .do-lk-topbar {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 1px solid #38bdf8;
+    border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.85), 0 0 15px rgba(56, 189, 248, 0.25);
+    white-space: nowrap;
+}
+
+#do-lk-screenshare-viewer.mode-minimized .do-lk-topbar {
+    position: relative;
+    top: 0;
+    left: 0;
+    transform: none;
+}
+
+/* En Modo Ventana Flotante la barra superior sirve para arrastrar la ventana */
+#do-lk-screenshare-viewer.mode-floating .do-lk-topbar {
+    cursor: move;
+}
+
+.do-lk-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.do-lk-live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+    animation: do-lk-dot-blink 1.4s infinite;
+}
+
+@keyframes do-lk-dot-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.do-lk-badge {
+    background: rgba(56, 189, 248, 0.18);
+    border: 1px solid #0284c7;
+    color: #38bdf8;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.do-lk-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.do-lk-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #050811;
+    border: 1px solid #1e293b;
+    padding: 2px 5px;
+    border-radius: 5px;
+}
+
+.do-lk-zoom-label {
+    color: #38bdf8;
+    font-weight: bold;
+    min-width: 42px;
+    text-align: center;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.do-lk-btn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: monospace;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+}
+
+.do-lk-btn:hover {
+    background: #334155;
+    border-color: #38bdf8;
+    color: #ffffff;
+}
+
+.do-lk-btn.active {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.do-lk-btn-danger {
+    background: #7f1d1d;
+    border-color: #b91c1c;
+    color: #fecaca;
+    font-weight: bold;
+}
+
+.do-lk-btn-danger:hover {
+    background: #991b1b;
+    border-color: #ef4444;
+    color: #ffffff;
+}
+
+.do-lk-btn-primary {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.do-lk-btn-primary:hover {
+    background: #0369a1;
+    border-color: #7dd3fc;
+}
+
+/* 5. Escenario de Vídeo con Pan & Zoom */
+.do-lk-video-stage {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: radial-gradient(circle at center, #0a101f 0%, #020409 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+}
+
+.do-lk-video-stage.is-dragging {
+    cursor: grabbing;
+}
+
+.do-lk-video-Element {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform-origin: center center;
+    transition: transform 0.05s linear;
+    pointer-events: none;
+}
+
+.do-lk-stage-hint {
+    position: absolute;
+    bottom: 10px;
+    right: 16px;
+    background: rgba(9, 14, 26, 0.78);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    color: #94a3b8;
+    font-family: monospace;
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 5px;
+    pointer-events: none;
+    z-index: 30;
+}
+
+/* Tirador de redimensionado en esquina inferior derecha (solo en Modo Ventana Flotante) */
+.do-lk-resize-handle {
+    display: none;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nwse-resize;
+    z-index: 50;
+    background: linear-gradient(135deg, transparent 50%, rgba(56, 189, 248, 0.7) 50%);
+    border-bottom-right-radius: 8px;
+}
+
+#do-lk-screenshare-viewer.mode-floating .do-lk-resize-handle {
+    display: block;
+}
+
