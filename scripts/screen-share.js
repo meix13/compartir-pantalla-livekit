@@ -900,6 +900,56 @@ Hooks.once("init", () => {
         },
         default: "floating"
     });
+
+    // 1. Protección anti-bloqueo al 98%: posponer la conexión inicial de WebRTC/LiveKit hasta que el Canvas termine de cargar (100%)
+    const AVMasterCls = foundry?.av?.AVMaster || window.AVMaster;
+    if (AVMasterCls?.prototype?.connect && !AVMasterCls.prototype._doDeferredInitPatched) {
+        AVMasterCls.prototype._doDeferredInitPatched = true;
+        const origAVConnect = AVMasterCls.prototype.connect;
+        AVMasterCls.prototype.connect = async function (...args) {
+            if (!game.ready) {
+                console.log(`${MODULE_ID} | Posponiendo conexión inicial de LiveKit hasta que la escena termine de cargar al 100%...`);
+                return new Promise((resolve) => {
+                    Hooks.once("ready", () => {
+                        setTimeout(async () => {
+                            try {
+                                const res = await origAVConnect.apply(this, args);
+                                resolve(res);
+                            } catch (err) {
+                                console.warn(`${MODULE_ID} | Error en conexión diferida de LiveKit:`, err);
+                                resolve(false);
+                            }
+                        }, 350);
+                    });
+                });
+            }
+            return origAVConnect.apply(this, args);
+        };
+    }
+
+    // 2. Salvavidas contra texturas/vídeos colgados al 98% en TextureLoader.loadTexture en la primera carga en frío
+    const TexLoaderCls = foundry?.canvas?.TextureLoader || window.TextureLoader;
+    if (TexLoaderCls?.prototype?.loadTexture && !TexLoaderCls.prototype._doTimeoutPatched) {
+        TexLoaderCls.prototype._doTimeoutPatched = true;
+        const origLoadTexture = TexLoaderCls.prototype.loadTexture;
+        TexLoaderCls.prototype.loadTexture = async function (src, ...rest) {
+            const timeoutMs = 12000;
+            let timer = null;
+            try {
+                return await Promise.race([
+                    origLoadTexture.call(this, src, ...rest),
+                    new Promise((resolve) => {
+                        timer = setTimeout(() => {
+                            console.warn(`${MODULE_ID} | [Anti-98%] El recurso tardó más de ${timeoutMs / 1000}s en responder en frío, desbloqueando carga:`, src);
+                            resolve(null);
+                        }, timeoutMs);
+                    })
+                ]);
+            } finally {
+                if (timer) clearTimeout(timer);
+            }
+        };
+    }
 });
 
 // Engancharse a LiveKit tan pronto como esté disponible
